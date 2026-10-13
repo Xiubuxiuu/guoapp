@@ -1,0 +1,57 @@
+name: Build Zhenguojian iOS unsigned
+
+on:
+  push:
+    branches: ['ios/zhenguojian-unsigned']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: zhenguojian-ios-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GOPROXY: https://proxy.golang.org,direct
+  GOSUMDB: sum.golang.org
+
+jobs:
+  ios:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: native/go.mod
+          cache-dependency-path: native/go.sum
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.4'
+          channel: stable
+          cache: true
+      - name: Resolve existing Flutter dependencies
+        run: flutter pub get
+      - name: Build ARM64 Release with all sources
+        run: python3 scripts/build_ios.py --all-sources
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zhenguojian-ios-unsigned
+          path: |
+            dist/ios/zhenguojian-ios-unsigned.ipa
+            dist/ios/validation.json
+            dist/ios/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios-build-inputs
+          path: |
+            pubspec.lock
+            ios/Podfile.lock
+          retention-days: 30

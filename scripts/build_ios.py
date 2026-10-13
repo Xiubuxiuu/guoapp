@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 
 from app_build import BuildVariant, add_variant_argument
+from validate_ios import validate_ipa
 
 root = Path(__file__).resolve().parents[1]
 
@@ -106,23 +107,22 @@ def main():
         destination = output / f'{variant.slug}-{version}-ios-unsigned-app.zip'
         run(['ditto', '-c', '-k', '--sequesterRsrc', '--keepParent', str(application), str(destination)])
         artifacts.append(destination)
-        # 额外打包未签名 IPA：IPA 结构为 zip 内 Payload/Runner.app。
-        # 便于用户用 AltStore / Sideloadly / TrollStore 自签后直接安装。
         payload = output / 'Payload'
         if payload.exists():
             shutil.rmtree(payload)
         payload.mkdir(parents=True)
         shutil.copytree(application, payload / application.name, symlinks=True)
-        ipa = output / f'{variant.slug}-{version}-ios-unsigned.ipa'
+        ipa = output / f'{variant.slug}-ios-unsigned.ipa'
         if ipa.exists():
             ipa.unlink()
-        run(['ditto', '-c', '-k', '--sequesterRsrc', str(payload), str(ipa)])
+        run(['ditto', '-c', '-k', '--keepParent', str(payload), str(ipa)])
         shutil.rmtree(payload)
+        validate_ipa(ipa, variant, output / 'validation.json')
         artifacts.append(ipa)
     if not artifacts:
         raise SystemExit('未生成 iOS 安装包。')
     checksums = []
-    for artifact in sorted(output.glob(f'*-{version}-ios*')):
+    for artifact in sorted(artifacts):
         digest = hashlib.sha256()
         with artifact.open('rb') as stream:
             for chunk in iter(lambda: stream.read(1024 * 1024), b''):

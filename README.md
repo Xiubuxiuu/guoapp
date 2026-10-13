@@ -70,7 +70,7 @@ Flutter 多端独立短剧 / 影视应用，原名「短剧库 APP」。站源�
 | Android 8.0+ | 三架构（arm64-v8a / armeabi-v7a / x86_64）APK；同一签名可覆盖升级 |
 | Windows 10/11 x64 | 完整 ZIP 解压后运行 `hongguojian.exe` / `zhenguojian.exe`，保留所有 DLL 与 `data`；局域网原生发现依赖 Windows 10 1903+ |
 | Android TV | 与手机共用源码，自动识别电视模式并保持横屏；待电视 / 盒子实机验收 |
-| iOS 15.1+ | 已加入工程、Go 核心链接、媒体依赖、文件管理与构建脚本；iOS 播放页禁用 media_kit_video 硬件纹理加速以规避 libmpv 渲染崩溃；待 Xcode 构建与真机验收，无已签名 IPA |
+| iOS 15.1+ | 已加入工程、Go 核心链接、媒体依赖、文件管理与构建脚本；iOS 播放页禁用 media_kit_video 硬件纹理加速以规避 libmpv 渲染崩溃；全站源 ARM64 Release 未签名 IPA 已通过 macOS Actions 构建及结构、FFI 和原生依赖静态检查；iPhone 13 Pro Max / iOS 27 签名、启动、搜索与播放待真机验收 |
 
 `INSTALL_FAILED_NO_MATCHING_ABIS` 表示 APK 与设备架构不匹配，请更换对应架构安装包。
 
@@ -82,7 +82,7 @@ Flutter 多端独立短剧 / 影视应用，原名「短剧库 APP」。站源�
 | --- | --- |
 | `*-android` | 三种架构 APK 和 SHA256 |
 | `*-windows` | 完整 ZIP 和 SHA256 |
-| `*-ios-unsigned` | 未签名 `.app` ZIP 和 SHA256，不能直接当已签名 IPA 安装 |
+| `zhenguojian-ios-unsigned` | 全站源未签名 `zhenguojian-ios-unsigned.ipa`、原生库静态验证报告和 SHA256；须签名后安装 |
 
 推送 `main` 且 android / ios / windows 全部构建成功时，自动创建 / 更新 GitHub Release（tag `app-v{version}`）。发布新版本前需先在 `pubspec.yaml` 提升 `version`，否则会覆盖同名 tag 的 Release。
 
@@ -122,6 +122,10 @@ python3 scripts/build_ios.py --all-sources
 python3 scripts/build_ios.py --core-only [--simulator]
 python3 scripts/build_ios.py --export-options /path/to/ExportOptions.plist
 ~~~
+
+独立分支 `ios/zhenguojian-unsigned` 的 **Build Zhenguojian iOS unsigned** 工作流仅执行 `python3 scripts/build_ios.py --all-sources`，不触发 Android 或 Release 发布。成功后在运行页面的 Artifacts 下载 `zhenguojian-ios-unsigned`，解压得到实际 IPA。静态检查包含 `Payload/Runner.app`、应用名称和标识、最低 iOS 版本、真机 ARM64 二进制、Go FFI 入口及嵌入的 libmpv / FFmpegKit 和动态依赖；不能据此宣称启动、搜索或播放通过真机验证。
+
+使用支持设备系统版本的 Sideloadly 或 AltStore，在电脑连接并信任 iPhone，使用自己的 Apple ID 或有效开发证书签名 IPA 后安装。按系统提示启用开发者模式并信任开发者；免费 Apple ID 签名通常需每 7 天续签。未签名 IPA 不能直接点击安装，不依赖 TrollStore。iPhone 13 Pro Max / iOS 27 的安装、冷启动、全站源搜索、分类、详情、选集、在线播放（声音、拖动、切集、横竖屏）、收藏和播放记录均须真机验收。仅对有权访问的内容测试。
 
 产物在 `dist/android`、`dist/windows`、`dist/ios`，红果版以 `hongguojian-` 开头，全站源版以 `zhenguojian-` 开头。
 

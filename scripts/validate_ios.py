@@ -54,6 +54,15 @@ def validate_ipa(package, variant, report):
                 loads = tool('xcrun', 'otool', '-l', str(path))
                 require('platform 2' in loads or 'LC_VERSION_MIN_IPHONEOS' in loads,
                         '二进制不是 iOS 真机目标：' + str(path))
+                minimum = re.search(r'^\s*minos ([0-9.]+)$', loads, re.MULTILINE)
+                if minimum is None:
+                    minimum = re.search(r'cmd LC_VERSION_MIN_IPHONEOS\s+cmdsize \d+\s+version ([0-9.]+)', loads)
+                require(minimum is not None, '缺少原生最低系统版本：' + str(path))
+                native_minimum = minimum.group(1)
+                def version_tuple(value):
+                    return tuple((list(map(int, value.split('.'))) + [0, 0])[:3])
+                require(version_tuple(native_minimum) <= version_tuple(info['MinimumOSVersion']),
+                        '原生库最低系统版本高于应用：' + str(path))
                 dependencies = []
                 for line in tool('xcrun', 'otool', '-L', str(path)).splitlines()[1:]:
                     dependency = line.strip().split(' (')[0]
@@ -71,7 +80,7 @@ def validate_ipa(package, variant, report):
                         require(dependency.startswith(('/System/Library/', '/usr/lib/')),
                                 '原生依赖使用构建机路径：' + dependency)
                 binaries.append({'path': str(path.relative_to(application)),
-                                 'architectures': architectures, 'dependencies': dependencies})
+                                 'architectures': architectures, 'minimum_os': native_minimum, 'dependencies': dependencies})
             require(any('mpv' in item['path'].lower() for item in binaries), '缺少 libmpv 播放库')
             require(any('ffmpegkit' in item['path'].lower() for item in binaries), '缺少 FFmpegKit 媒体库')
     result = {'package': package.name, 'edition': variant.slug, 'all_sources': variant.all_sources,

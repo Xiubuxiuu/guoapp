@@ -122,7 +122,7 @@ def main():
     if not artifacts:
         raise SystemExit('未生成 iOS 安装包。')
     checksums = []
-    for artifact in sorted(artifacts):
+    for artifact in sorted(artifact for artifact in artifacts if artifact.suffix == '.ipa'):
         digest = hashlib.sha256()
         with artifact.open('rb') as stream:
             for chunk in iter(lambda: stream.read(1024 * 1024), b''):
